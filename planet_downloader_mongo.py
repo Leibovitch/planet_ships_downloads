@@ -26,6 +26,7 @@ config = json.load(open(sys.argv[1]))
 
 stats_endpoint_request = config["stats_endpoint_request"]
 
+# Get the Planet API key from envitoment varible
 planet_api_key = os.environ['PL_API_KEY']
 
 #setup db
@@ -33,36 +34,42 @@ client = MongoClient('mongodb://localhost:27017/')
 db = client.planet
 ships_collection = db.ships
 cursor_collection = db.cursors
-ships_collection.create_index([('updateTime', pymongo.ASCENDING)], unique=True)
+# ships_collection.create_index([('updateTime', pymongo.ASCENDING)], unique=True)
 
+# Init the session object
+session = requests.Session()
+session.auth = (planet_api_key, '')
 
-def save_ships(result):
-    ships_collection.insert_many({"feature": result.features})
+def save_ships(features):
+  for feature in features:
+    ships_collection.insert_one(feature)
 
+  # ships_collection.insert_many(features)
 
 def save_cursor(cur):
-    cursor_collection.upsert({"_id": "cursor", "value": cur})
+  cursor_collection.upsert({"_id": "cursor", "value": cur})
 
-#this function return the next cursor 
+# This function return the next cursor 
 def fetch_page(cursor):
   result = \
-      session.post(
-          'https://api.planet.com/collections/v1/collections/ships0327/search/continue',
-          json=cursor)
-  #insert the ship to db 
-  save_ships(result)
-  save_cursor(result.cursor)
+    session.post(
+      'https://api.planet.com/collections/v1/collections/ships0327/search/continue',
+      json={ "cursor": cursor }).json()
+
+  save_ships(result["features"])
+  # save_cursor(result["cursor"])
   return cursor
 
 
 query = True
+
+# This is what is needed to execute the first cursor.
 first_cursor = \
   session.post(
     'https://api.planet.com/collections/v1/collections/ships0327/search/create',
     json=stats_endpoint_request)
 
-  # This is what is needed to execute the first cursor.
-  cursor = first_cursor.json()["cursor"]
+cursor = first_cursor.json()["cursor"]
 
 while (query):
   print("cursor", cursor)
@@ -74,4 +81,3 @@ while (query):
     cursor = fetch_page(cursor)
 
 time.sleep(600)
-

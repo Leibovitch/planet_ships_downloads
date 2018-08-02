@@ -1,0 +1,17 @@
+{
+  "stats_endpoint_request": {
+    "geometry": {
+      "$intersects": {
+        "type": "Polygon",
+        "coordinates": [[[
+        ]]]
+      }
+    },
+    "time": {
+      "observed": {
+        "$gte": "2018-07-01T07:42:35+00:00",
+        "$lt": "2020-12-10T07:42:35+00:00"
+      }
+    }
+  }
+}
